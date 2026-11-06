@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Candidato;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SimulacaoDeVotoTest extends TestCase
@@ -82,6 +84,38 @@ class SimulacaoDeVotoTest extends TestCase
 
         $this->assertDatabaseHas('votos_simulados', ['etapa' => 4, 'tipo' => 'nulo']);
         $this->assertDatabaseHas('votos_simulados', ['etapa' => 1, 'tipo' => 'legenda']);
+    }
+
+    public function test_permite_enviar_consultar_e_remover_foto_do_candidato(): void
+    {
+        Storage::fake('public');
+
+        $response = $this->post('/api/candidatos', [
+            'nome' => 'Pessoa com Foto',
+            'numero' => 9999,
+            'cargo' => 'Deputado Federal',
+            'partido' => 'Partido de Teste',
+            'sigla_partido' => 'TST',
+            'data_nascimento' => '1982-02-02',
+            'data_registro' => '2026-02-02',
+            'ativo' => 1,
+            'votos' => 0,
+            'foto' => UploadedFile::fake()->image('retrato.png', 300, 400),
+        ])->assertCreated();
+
+        $id = $response->json('id');
+        $this->assertNotNull($response->json('foto_url'));
+        $path = Candidato::findOrFail($id)->foto_path;
+        Storage::disk('public')->assertExists($path);
+
+        $this->get('/api/candidatos/'.$id.'/foto')->assertOk();
+
+        $this->post('/api/candidatos/'.$id, [
+            '_method' => 'PUT',
+            'remover_foto' => '1',
+        ])->assertOk()->assertJsonPath('foto_url', null);
+
+        Storage::disk('public')->assertMissing($path);
     }
 }
 

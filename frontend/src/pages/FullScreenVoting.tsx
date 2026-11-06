@@ -24,10 +24,13 @@ function normalizedOffice(cargo: string): string {
   return '';
 }
 
+let voteAudioContext: AudioContext | null = null;
+
 function playToneSequence(final: boolean) {
   try {
-    const context = new AudioContext();
-    void context.resume();
+    const context = voteAudioContext ?? new AudioContext();
+    voteAudioContext = context;
+    if (context.state === 'suspended') void context.resume();
     const start = context.currentTime + 0.015;
     const tones = final
       ? [[660, 0, 0.09], [880, 0.12, 0.09], [990, 0.24, 0.1], [1320, 0.39, 0.4]]
@@ -48,7 +51,6 @@ function playToneSequence(final: boolean) {
       oscillator.stop(from + duration + 0.03);
     }
 
-    window.setTimeout(() => { void context.close(); }, final ? 1300 : 450);
   } catch {
     return;
   }
