@@ -1,0 +1,34 @@
+{
+  "name": "EleiçãoLab · Laravel + React",
+  "image": "mcr.microsoft.com/devcontainers/php:8.4-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [
+    8000,
+    5173
+  ],
+  "portsAttributes": {
+    "5173": {
+      "label": "EleiçãoLab frontend",
+      "onAutoForward": "openBrowser"
+    },
+    "8000": {
+      "label": "API Laravel",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

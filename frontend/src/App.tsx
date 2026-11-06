@@ -1,0 +1,106 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { BarChart3, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, Edit3, Fingerprint, Home, Plus, RefreshCcw, Search, ShieldCheck, Trash2, Users, Vote, X } from 'lucide-react';
+import { api, getError, useCandidato, useCandidatos, useCandidatoMutation, type Candidato, type CandidatoInput } from './api';
+import { LandingPage } from './pages/LandingPage';
+import { FullScreenVoting } from './pages/FullScreenVoting';
+
+const schema = z.object({
+  nome: z.string().trim().min(3, 'Informe o nome completo.').max(150),
+  numero: z.coerce.number<number>().int().min(1).max(99999),
+  partido: z.string().trim().min(2).max(150),
+  sigla_partido: z.string().trim().min(1).max(20),
+  cargo: z.string().trim().min(2).max(100),
+  data_nascimento: z.string().min(1, 'Informe a data de nascimento.'),
+  data_registro: z.string().min(1, 'Informe a data de registro.'),
+  votos: z.coerce.number<number>().int().min(0),
+  ativo: z.boolean()
+});
+type CandidateFormValues = z.infer<typeof schema>;
+const localDate = (value: string | undefined) => value?.slice(0, 10) ?? '';
+const fmt = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+function initials(name: string) { return name.split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase(); }
+function Avatar({ name }: { name: string }) { return <span className="avatar">{initials(name)}</span>; }
+function Status({ active }: { active: boolean }) { return <span className={'status ' + (active ? 'status-live' : 'status-off') }><span className="status-dot"/>{active ? 'Ativo' : 'Inativo'}</span>; }
+function Heading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
+  return <div className="page-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div>;
+}
+function Notice({ message, retry }: { message: string; retry?: () => void }) { return <div className="notice"><CircleAlert size={22}/><span>{message}</span>{retry && <button className="btn btn-secondary" onClick={retry}><RefreshCcw size={16}/>Tentar novamente</button>}</div>; }
+function Layout() {
+  return <div className="shell"><aside className="sidebar"><Link to="/" className="brand"><span className="brand-icon"><Fingerprint size={25}/></span><span>eleição<span className="brand-light">lab</span><small>SISTEMA ACADÊMICO</small></span></Link><Link to="/" className="landing-brand-return"><Fingerprint size={15}/> Tela de abertura</Link><div className="nav-label">VISÃO GERAL</div><nav><NavLink end to="/painel" className={({isActive})=>isActive?'active':''}><Home size={19}/>Visão geral</NavLink><NavLink to="/candidatos" className={({isActive})=>isActive?'active':''}><Users size={19}/>Candidatos</NavLink><NavLink to="/urna" className={({isActive})=>isActive?'active':''}><Vote size={19}/>Urna eletrônica</NavLink></nav><div className="sidebar-bottom"><ShieldCheck size={19}/><div><strong>Ambiente de testes</strong><small>Simulação para fins acadêmicos</small></div></div></aside><main className="main"><header className="topbar"><div className="topbar-path">ELEIÇÃOLAB <ChevronRight size={14}/> PAINEL DE CONTROLE</div><div className="topbar-indicator"><span/>API REST · LARAVEL</div></header><div className="content"><Routes><Route path="/painel" element={<Dashboard/>}/><Route path="/candidatos" element={<Candidates/>}/><Route path="/candidatos/novo" element={<FormPage/>}/><Route path="/candidatos/editar/:id" element={<FormPage/>}/><Route path="/candidatos/excluir/:id" element={<DeletePage/>}/><Route path="/candidatos/:id" element={<Details/>}/><Route path="/urna" element={<Urna/>}/><Route path="*" element={<NotFound/>}/></Routes></div></main></div>;
+}
+function Metrics({ data }: { data: Candidato[] }) {
+  const totalVotes = data.reduce((total, c) => total + c.votos, 0);
+  const items = [{label:'Candidatos cadastrados',value:fmt(data.length),icon:Users,detail:'Registros na base'},{label:'Candidatos ativos',value:fmt(data.filter(c=>c.ativo).length),icon:CheckCircle2,detail:'Disponíveis para votação'},{label:'Votos registrados',value:fmt(totalVotes),icon:Vote,detail:'Votos de demonstração'},{label:'Partidos cadastrados',value:fmt(new Set(data.map(c=>c.sigla_partido)).size),icon:BarChart3,detail:'Siglas distintas'}];
+  return <div className="metrics">{items.map(({label,value,icon:Icon,detail})=><div className="metric" key={label}><div className="metric-header"><span>{label}</span><div className="metric-icon"><Icon size={19}/></div></div><strong>{value}</strong><small>{detail}</small></div>)}</div>;
+}
+function Dashboard() {
+  const {data, isLoading, error, refetch} = useCandidatos();
+  const leaders = [...(data??[])].sort((a,b)=>b.votos-a.votos).slice(0,5);
+  const max = Math.max(1,...leaders.map(c=>c.votos));
+  return <><Heading eyebrow="VISÃO GERAL / DASHBOARD" title="Painel de controle" description="Acompanhe os dados do cadastro eleitoral e os resultados da simulação." action={<Link className="btn btn-primary" to="/candidatos/novo"><Plus size={18}/>Novo candidato</Link>}/>
+    {isLoading ? <Loading/> : error ? <Notice message={getError(error)} retry={()=>void refetch()}/> : <><Metrics data={data??[]}/><div className="dashboard-grid"><section className="panel"><div className="panel-head"><div><span className="eyebrow">RANKING</span><h2>Resultado parcial</h2></div><Link to="/candidatos" className="text-link">Ver candidatos <ChevronRight size={16}/></Link></div>{leaders.length?leaders.map((c,index)=><div className="rank-row" key={c.id}><span className="rank-position">{String(index+1).padStart(2,'0')}</span><Avatar name={c.nome}/><div className="rank-body"><div className="rank-name"><strong>{c.nome}</strong><small>{c.sigla_partido} · {c.numero}</small></div><div className="progress"><span style={{width:(c.votos/max*100)+'%'}}/></div></div><strong className="rank-votes">{fmt(c.votos)}</strong></div>):<Empty/>}</section><section className="panel intro-panel"><div className="eyebrow">SIMULAÇÃO INTERATIVA</div><div className="intro-icon"><Vote size={36}/></div><h2>Experimente a urna digital</h2><p>Teste o fluxo de votação com teclado numérico, conferência dos candidatos e confirmação de votos.</p><Link className="btn btn-primary" to="/urna">Abrir urna <ChevronRight size={18}/></Link><div className="intro-note"><ShieldCheck size={17}/>Uso exclusivamente educacional</div></section></div></>}
+  </>;
+}
+function Loading(){return <div className="loading"><span className="spinner"/>Carregando informações...</div>;}
+function Empty(){return <div className="empty"><ClipboardList size={35}/><strong>Nenhum candidato cadastrado</strong><p>Comece criando um novo registro.</p><Link to="/candidatos/novo" className="btn btn-primary">Cadastrar candidato</Link></div>;}
+function Candidates(){
+  const {data,isLoading,error,refetch}=useCandidatos();
+  const [search,setSearch]=useState('');
+  const [filter,setFilter]=useState('todos');
+  const filtered=useMemo(()=>(data??[]).filter(c=>(filter==='todos'||(filter==='ativos'?c.ativo:!c.ativo))&&[c.nome,c.numero,c.partido,c.sigla_partido,c.cargo].join(' ').toLowerCase().includes(search.toLowerCase())),[data,search,filter]);
+  return <><Heading eyebrow="CADASTRO / GERENCIAMENTO" title="Candidatos" description="Consulte, cadastre, edite e gerencie os candidatos da eleição." action={<Link to="/candidatos/novo" className="btn btn-primary"><Plus size={18}/>Novo candidato</Link>}/><section className="panel table-panel"><div className="toolbar"><div className="search"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar nome, número ou partido..." aria-label="Pesquisar candidatos"/></div><select value={filter} onChange={e=>setFilter(e.target.value)} aria-label="Filtrar situação"><option value="todos">Todos os candidatos</option><option value="ativos">Ativos</option><option value="inativos">Inativos</option></select></div>{isLoading?<Loading/>:error?<Notice message={getError(error)} retry={()=>void refetch()}/>:filtered.length?<div className="table-scroll"><table><thead><tr><th>CANDIDATO</th><th>NÚMERO</th><th>PARTIDO</th><th>CARGO</th><th>SITUAÇÃO</th><th className="th-right">AÇÕES</th></tr></thead><tbody>{filtered.map(c=><tr key={c.id}><td><Link className="candidate-link" to={'/candidatos/'+c.id}><Avatar name={c.nome}/><strong>{c.nome}</strong></Link></td><td><span className="number-tag">{c.numero}</span></td><td><div className="party"><strong>{c.sigla_partido}</strong><small>{c.partido}</small></div></td><td>{c.cargo}</td><td><Status active={c.ativo}/></td><td><div className="table-actions"><Link aria-label={'Editar '+c.nome} title="Editar" to={'/candidatos/editar/'+c.id}><Edit3 size={17}/></Link><Link className="danger-icon" aria-label={'Excluir '+c.nome} title="Excluir" to={'/candidatos/excluir/'+c.id}><Trash2 size={17}/></Link></div></td></tr>)}</tbody></table></div>:<Empty/>}<div className="table-footer">Exibindo {filtered.length} de {data?.length??0} candidatos</div></section></>;
+}
+const fields = [
+  {name:'nome',label:'Nome completo',placeholder:'Nome do candidato'},
+  {name:'numero',label:'Número eleitoral',placeholder:'Ex.: 12345',type:'number'},
+  {name:'partido',label:'Nome do partido',placeholder:'Nome do partido'},
+  {name:'sigla_partido',label:'Sigla do partido',placeholder:'Ex.: ABC'},
+  {name:'cargo',label:'Cargo',placeholder:'Ex.: Vereador'},
+  {name:'data_nascimento',label:'Data de nascimento',type:'date'},
+  {name:'data_registro',label:'Data de registro',type:'date'},
+  {name:'votos',label:'Votos iniciais',type:'number'}
+] as const;
+function FormPage(){
+  const {id}=useParams();const navigate=useNavigate();const editing=Boolean(id);const candidateId=Number(id);
+  const {data,isLoading,error}=useCandidato(editing?candidateId:0);
+  const mutation=useCandidatoMutation(async (payload:CandidatoInput)=> editing?api.update(candidateId,payload):api.create(payload));
+  const {register,handleSubmit,formState:{errors},reset}=useForm<CandidateFormValues>({resolver:zodResolver(schema),defaultValues:{nome:'',numero:0,partido:'',sigla_partido:'',cargo:'',data_nascimento:'',data_registro:new Date().toISOString().slice(0,10),votos:0,ativo:true}});
+  useEffect(()=>{if(data)reset({...data,data_nascimento:localDate(data.data_nascimento),data_registro:localDate(data.data_registro)});},[data,reset]);
+  async function submit(values:CandidateFormValues){try{await mutation.mutateAsync(values);navigate('/candidatos');}catch{}}
+  return <><Heading eyebrow={'CADASTRO / '+(editing?'EDIÇÃO':'NOVO')} title={editing?'Editar candidato':'Novo candidato'} description={editing?'Atualize os dados cadastrais com segurança.':'Preencha os dados para cadastrar um novo candidato na API.'}/>{editing&&isLoading?<Loading/>:editing&&error?<Notice message={getError(error)}/>:<form className="panel form-panel" onSubmit={handleSubmit(submit)}><div className="form-head"><div><h2>Dados do candidato</h2><p>Os campos são validados antes de enviar para o servidor.</p></div><span className="form-chip">CADASTRO ELEITORAL</span></div><div className="form-grid">{fields.map(field=><label key={field.name} className={'field '+(field.name==='nome'?'field-wide':'')}><span>{field.label}</span><input type={'type'in field?field.type:'text'} placeholder={'placeholder'in field?field.placeholder:''} {...register(field.name,{valueAsNumber:field.name==='numero'||field.name==='votos'})}/>{errors[field.name]&&<small className="field-error">{errors[field.name]?.message}</small>}</label>)}<label className="field checkbox-field"><input type="checkbox" {...register('ativo')}/><span>Candidato ativo e disponível para votação</span></label></div>{mutation.error&&<Notice message={getError(mutation.error)}/>}<div className="form-actions"><Link className="btn btn-secondary" to="/candidatos">Cancelar</Link><button className="btn btn-primary" type="submit" disabled={mutation.isPending}>{mutation.isPending?'Salvando...':editing?'Salvar alterações':'Cadastrar candidato'}</button></div></form>}</>;
+}
+function Details(){
+ const id=Number(useParams().id);const {data,isLoading,error}=useCandidato(id);
+ return <><Heading eyebrow="CADASTRO / DETALHES" title="Detalhes do candidato" description="Visualização completa dos dados registrados." action={<Link className="btn btn-secondary" to="/candidatos">Voltar à lista</Link>}/>{isLoading?<Loading/>:error?<Notice message={getError(error)}/>:data&&<section className="panel detail-panel"><div className="detail-head"><Avatar name={data.nome}/><div><h2>{data.nome}</h2><p>{data.sigla_partido} · {data.cargo}</p></div><Status active={data.ativo}/></div><div className="detail-grid">{[['Número',data.numero],['Partido',data.partido],['Sigla',data.sigla_partido],['Cargo',data.cargo],['Nascimento',localDate(data.data_nascimento)],['Registro',localDate(data.data_registro)],['Votos',fmt(data.votos)],['ID',data.id]].map(([label,value])=><div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div><div className="form-actions"><Link className="btn btn-secondary" to={'/candidatos/excluir/'+id}><Trash2 size={17}/>Excluir</Link><Link className="btn btn-primary" to={'/candidatos/editar/'+id}><Edit3 size={17}/>Editar candidato</Link></div></section>}</>;
+}
+function DeletePage(){
+ const id=Number(useParams().id);const navigate=useNavigate();const {data,isLoading,error}=useCandidato(id);const mutation=useCandidatoMutation(()=>api.delete(id));
+ async function remove(){try{await mutation.mutateAsync(undefined);navigate('/candidatos');}catch{}}
+ return <><Heading eyebrow="CADASTRO / EXCLUSÃO" title="Excluir candidato" description="Confirme a remoção definitiva deste cadastro." />{isLoading?<Loading/>:error?<Notice message={getError(error)}/>:data&&<section className="panel confirm-panel"><div className="delete-symbol"><Trash2 size={29}/></div><h2>Excluir {data.nome}?</h2><p>Essa ação removerá definitivamente os dados do candidato número <strong>{data.numero}</strong>. Não é possível desfazer.</p>{mutation.error&&<Notice message={getError(mutation.error)}/>}<div className="form-actions"><Link className="btn btn-secondary" to="/candidatos">Cancelar</Link><button className="btn btn-danger" onClick={()=>void remove()} disabled={mutation.isPending}>{mutation.isPending?'Excluindo...':'Sim, excluir candidato'}</button></div></section>}</>;
+}
+function Urna(){
+ const {data,isLoading,error,refetch}=useCandidatos();
+ const [digits,setDigits]=useState('');const [finished,setFinished]=useState(false);const [message,setMessage]=useState('');
+ const candidates=useMemo(()=>(data??[]).filter(c=>c.ativo),[data]);
+ const length=Math.max(2,...candidates.map(c=>String(c.numero).length));
+ const candidate=candidates.find(c=>String(c.numero)===digits);
+ const vote=useCandidatoMutation((id:number)=>api.vote(id));
+ const [blank,setBlank]=useState(false);
+ function reset(){setDigits('');setFinished(false);setMessage('');setBlank(false);}
+ function append(digit:string){if(!finished&&!vote.isPending&&!blank&&digits.length<length){setDigits(old=>old+digit);setMessage('');}}
+ async function confirm(){if(finished||vote.isPending)return;if(blank){setMessage('O voto em branco não é persistido nesta simulação.');return;}if(!candidate){setMessage('Digite o número válido de um candidato ativo.');return;}try{await vote.mutateAsync(candidate.id);setFinished(true);setMessage('');void refetch();}catch(e){setMessage(getError(e));}}
+ useEffect(()=>{function key(event:KeyboardEvent){if(event.target instanceof HTMLInputElement||event.target instanceof HTMLTextAreaElement)return;if(/^[0-9]$/.test(event.key))append(event.key);if(event.key==='Backspace')setDigits(old=>old.slice(0,-1));if(event.key==='Escape')reset();if(event.key==='Enter')void confirm();}window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);});
+ return <><Heading eyebrow="SIMULADOR / URNA ELETRÔNICA" title="Urna eletrônica" description="Simule uma votação com candidatos cadastrados na API Laravel." action={<Link className="btn btn-secondary" to="/candidatos">Gerenciar candidatos</Link>}/><div className="sim-alert"><ShieldCheck size={18}/>Simulação acadêmica. Não representa um processo eleitoral oficial ou sigiloso.</div>{isLoading?<Loading/>:error?<Notice message={getError(error)} retry={()=>void refetch()}/>:<div className="voting-grid"><section className="machine"><div className="machine-top"><span className="machine-logo"><Fingerprint size={26}/></span><div><strong>ELEIÇÃO<span>LAB</span></strong><small>URNA DIGITAL · AMBIENTE DEMONSTRATIVO</small></div><span className="demo-tag">DEMO</span></div><div className="machine-content"><div className="machine-screen">{finished?<div className="finish"><CheckCircle2 size={59}/><h2>FIM</h2><p>Voto registrado com sucesso.</p></div>:<><small>SEU VOTO PARA</small><h3>CANDIDATO</h3><div className="screen-line"/><p>Número:</p><div className="digits">{Array.from({length},(_,i)=><span key={i} className={i===digits.length?'cursor':''}>{digits[i]??''}</span>)}</div>{blank?<div className="screen-error">VOTO EM BRANCO · DEMONSTRAÇÃO</div>:candidate?<div className="screen-candidate"><Avatar name={candidate.nome}/><div><small>NOME</small><strong>{candidate.nome}</strong><small>PARTIDO</small><span>{candidate.sigla_partido} — {candidate.partido}</span><small>CARGO</small><span>{candidate.cargo}</span></div></div>:digits.length>=length?<div className="screen-error">Candidato não encontrado ou inativo.</div>:<div className="screen-placeholder">Digite o número do candidato.</div>}<div className="screen-help">CONFIRMA para votar · CORRIGE para limpar</div></>}</div><div className="keypad"><div className="keys">{['1','2','3','4','5','6','7','8','9','','0',''].map((key,i)=>key?<button key={i} onClick={()=>append(key)} disabled={finished||vote.isPending}>{key}</button>:<span key={i}/>)}</div><div className="key-actions"><button className="key-white" onClick={()=>{setBlank(true);setDigits('');setMessage('');}} disabled={finished}>BRANCO</button><button className="key-orange" onClick={reset}>CORRIGE</button><button className="key-green" onClick={()=>void confirm()} disabled={finished||vote.isPending}>{vote.isPending?'...':'CONFIRMA'}</button></div></div></div><div className="machine-foot">ELEIÇÃOLAB <span>·</span> SIMULAÇÃO</div></section><aside className="vote-side"><div className="panel guide"><span className="eyebrow">PASSO A PASSO</span><h2>Como votar</h2>{['Digite o número de um candidato no teclado.','Confira os dados exibidos na tela.','Pressione CONFIRMA para registrar o voto.'].map((s,i)=><div className="guide-step" key={i}><span>{String(i+1).padStart(2,'0')}</span><p>{s}</p></div>)}<div className="guide-tip">Teclado físico: números, Enter, Escape e Backspace.</div></div><div className="panel choices"><h2>Candidatos disponíveis <span>{candidates.length}</span></h2>{candidates.length?candidates.map(c=><button key={c.id} onClick={()=>{setDigits(String(c.numero));setFinished(false);setBlank(false);setMessage('');}}><span className="number-tag">{c.numero}</span><span><strong>{c.nome}</strong><small>{c.sigla_partido} · {c.cargo}</small></span></button>):<p>Nenhum candidato ativo. Cadastre um candidato para começar.</p>}</div>{message&&<Notice message={message}/>} {finished&&<button className="btn btn-primary full-width" onClick={reset}><RefreshCcw size={18}/>Nova votação</button>}</aside></div>}</>;
+}
+function NotFound(){return <div className="empty notfound"><X size={42}/><h1>Página não encontrada</h1><Link to="/" className="btn btn-primary">Voltar ao início</Link></div>;}
+export default function App() {
+  const { pathname } = useLocation();
+  if (pathname === '/' || pathname === '/urna') return <FullScreenVoting />;
+  if (pathname === '/apresentacao') return <LandingPage />;
+  return <Layout />;
+}
+
