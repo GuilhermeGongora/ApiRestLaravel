@@ -59,3 +59,18 @@ O projeto é educacional e não implementa votação anônima, autenticação de
 ## Bibliotecas obrigatórias
 
 `react-router-dom`, `react-hook-form`, `zod`, `@hookform/resolvers`, `axios` e `@tanstack/react-query`.
+
+## Nova interface e experiência 3D
+
+O endereço `http://localhost:5173/` abre a landing page profissional com uma urna eletrônica 3D procedural criada com Three.js e React Three Fiber. O painel administrativo está em `/painel`, e o simulador em `/urna`. As demais rotas de cadastro permanecem inalteradas.
+
+A cena 3D é carregada sob demanda apenas na abertura. Não depende de modelos externos ou de chaves de API. Se o navegador não oferecer suporte a WebGL, o restante do sistema continua acessível pelo botão de entrada.
+
+Para atualizar as dependências depois desta versão:
+
+```bash
+cd frontend
+npm install
+npm run build
+npm run dev
+```
