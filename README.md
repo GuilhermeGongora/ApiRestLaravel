@@ -1,95 +1,80 @@
-# EleiçãoLab — CRUD de candidatos e simulador de urna
+# EleiçãoLab — Simulador acadêmico de votação 2026
 
-Projeto acadêmico completo com API REST Laravel e frontend React, Vite e TypeScript.
+Frontend React/Vite + TypeScript integrado à API REST Laravel. Experiência de urna em tela cheia, dashboard separado e CRUD completo de candidatos, com upload de fotos.
 
-## Estrutura
+> **Projeto acadêmico e não oficial.** A identidade visual do TSE aparece exclusivamente como referência, sem vínculo, autorização institucional ou certificação. O aplicativo não reproduz garantias de sigilo, autenticação ou segurança de eleições reais.
 
-- `urna-api/` — API Laravel, migrations, validação e SQLite
-- `frontend/` — painel de controle, cadastro de candidatos e simulador de urna
-- `.devcontainer/` — configuração para GitHub Codespaces
+## Telas
 
-## Iniciar no GitHub Codespaces
+| Rota | Função |
+| --- | --- |
+| `/` ou `/urna` | Urna eletrônica em tela cheia |
+| `/painel` | Dashboard e estatísticas |
+| `/candidatos` | Listagem, filtros e CRUD |
+| `/candidatos/novo` | Cadastro, com foto opcional |
+| `/candidatos/editar/:id` | Edição, troca e remoção da foto |
+| `/candidatos/excluir/:id` | Confirmação de exclusão |
+| `/apresentacao` | Landing page e modelo 3D de urna com Three.js |
 
-Abra o repositório no Codespaces, utilizando a configuração Dev Container deste projeto. No primeiro início, o ambiente executa `composer install`, `npm install`, as migrations, o seeder de demonstração e a compilação do frontend. O script de inicialização executa automaticamente o Laravel e o Vite.
+## Sequência de votação — 2026, 1º turno
 
-Abra a porta **5173** no painel **Ports** para usar a interface. A porta **8000** hospeda a API Laravel.
+1. Deputado federal — 4 dígitos
+2. Deputado estadual ou distrital — 5 dígitos
+3. Senador, 1ª vaga — 3 dígitos
+4. Senador, 2ª vaga — 3 dígitos
+5. Governador — 2 dígitos
+6. Presidente da República — 2 dígitos
 
-## Iniciar manualmente
+O simulador permite seleção nominal, voto em branco, nulo e de legenda para deputados. Repetir o mesmo senador na segunda vaga resulta em voto nulo, conforme a regra aplicável. Uma confirmação avança de cargo; ao concluir a sexta etapa, a API registra todas as escolhas em uma transação e exibe **FIM**.
 
-Requisitos: PHP 8.3+, Composer, SQLite com a extensão PDO, Node.js 22+ e npm.
+O sinal sonoro é **sintetizado no navegador**, sem usar gravação oficial. Ele toca uma nota curta entre as etapas e uma sequência ao finalizar; há controle para desativar o som.
 
-Terminal 1:
-
-```bash
-cd urna-api
-cp -n .env.example .env
-touch database/database.sqlite
-composer install
-php artisan key:generate
-php artisan migrate
-php artisan db:seed --class=CandidatoSeeder
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-Terminal 2:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-A interface fica disponível na porta 5173. O Vite encaminha as chamadas `/api` para a porta 8000.
-
-## Funcionalidades
-
-- Dashboard com quantidade de candidatos, votos e ranking
-- CRUD completo de candidatos com validação de formulários
-- Busca e filtros por situação
-- Simulador de urna com teclado numérico e seleção de candidato
-- Confirmação de voto com incremento atômico no banco
-- Dados fictícios de demonstração sem duplicação no seeder
+As fotos são enviadas pelo formulário como imagens JPEG, PNG ou WebP até 2 MB. A API salva os arquivos na pasta de armazenamento e disponibiliza o endereço `/api/candidatos/{id}/foto`. Se não houver foto, a urna utiliza as iniciais.
 
 ## API
 
-`GET /api/candidatos`, `GET /api/candidatos/{id}`, `POST /api/candidatos`, `PUT /api/candidatos/{id}`, `DELETE /api/candidatos/{id}` e `POST /api/candidatos/{id}/votar`.
+- `GET /api/candidatos`
+- `GET /api/candidatos/{id}`
+- `POST /api/candidatos`
+- `POST /api/candidatos/{id}` com multipart e `_method=PUT`
+- `DELETE /api/candidatos/{id}`
+- `GET /api/candidatos/{id}/foto`
+- `POST /api/votacoes`, com `sessao_uuid` e seis escolhas (`numero`, `branco`)
+- `POST /api/candidatos/{id}/votar`, endpoint de compatibilidade
 
-O projeto é educacional e não implementa votação anônima, autenticação de eleitores, prevenção de votos repetidos ou mecanismos de uma eleição oficial.
+O banco mantém os totais nominais em `candidatos.votos` e os registros da simulação em `votos_simulados`. O mesmo identificador de sessão não incrementa votos duas vezes. **Não há controle de eleitor único, sigilo eleitoral ou apuração oficial.**
 
-## Bibliotecas obrigatórias
+O cadastro original mantém unicidade global do número; para a demonstração, utilize números distintos entre candidatos. Isso é uma simplificação acadêmica em comparação ao cadastro eleitoral real.
 
-`react-router-dom`, `react-hook-form`, `zod`, `@hookform/resolvers`, `axios` e `@tanstack/react-query`.
+## Executar no Codespaces
 
-
-## Telas da aplicação
-
-- `/` — urna eletrônica em tela cheia, para simular votos, com marca do TSE como referência visual e aviso de projeto não oficial.
-- `/urna` — alternativa direta para a mesma urna em tela cheia.
-- `/painel` — dashboard administrativo, indicadores e acesso às funcionalidades do CRUD.
-- `/candidatos` — listagem, pesquisa e gestão de candidatos.
-- `/candidatos/novo` — formulário de cadastro.
-- `/candidatos/editar/:id` — edição.
-- `/candidatos/excluir/:id` — confirmação de exclusão.
-- `/apresentacao` — landing page anterior, com urna Three.js/React Three Fiber.
-
-Na urna, BRANCO apresenta um estado de demonstração, mas não registra voto em branco. CORRIGE limpa a entrada. CONFIRMA envia um voto para `POST /api/candidatos/{id}/votar`, que executa incremento atômico no Laravel. O projeto não realiza autenticação de eleitor, anonimização ou controle de votação única.
-
-## Executar
-
-No Codespaces:
+Atualize a branch e execute as migrations para criar o campo da foto e a tabela de simulações:
 
 ```bash
 cd /workspaces/ApiRestLaravel
+git pull origin main
+cd urna-api
+php artisan migrate --force
+php artisan db:seed --class=CandidatoSeeder --force
+cd ..
 bash .devcontainer/start.sh
 ```
 
-Abra a porta 5173. Em caso de atualização de dependências:
+A interface estará disponível na porta **5173** e a API Laravel na **8000**. Se necessário, use `cd frontend && npm install && npm run build && npm run dev`.
+
+## Testes
 
 ```bash
-cd /workspaces/ApiRestLaravel/frontend
-npm install
+cd urna-api
+php artisan test --filter=SimulacaoDeVotoTest
+cd ../frontend
 npm run build
-npm run dev
 ```
 
-A imagem institucional é carregada do domínio oficial `www.tse.jus.br`. O uso é apenas para referência visual: o EleiçãoLab não possui vínculo, aprovação ou certificação do Tribunal Superior Eleitoral.
+O workflow `.github/workflows/verify-eleicaolab.yml` verifica o frontend e os testes da API em Pull Requests para `main`.
+
+## Tecnologias
+
+React 19, Vite, TypeScript, react-router-dom, react-hook-form, zod, @hookform/resolvers, axios, TanStack Query, Three.js, Laravel, SQLite.
+
+Documentação oficial de referência: [ordem de votação 2026](https://www.tse.jus.br/comunicacao/noticias/2026/Setembro/faltam-25-dias-saiba-qual-e-a-ordem-de-votacao-na-urna-eletronica) e [Manual do Eleitor](https://www.tse.jus.br/comunicacao/noticias/2026/Setembro/manual-do-eleitor-veja-como-se-preparar-para-a-votacao).
