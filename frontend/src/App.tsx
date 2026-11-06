@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { BarChart3, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, Edit3, Fingerprint, Home, Plus, RefreshCcw, Search, ShieldCheck, Trash2, Users, Vote, X } from 'lucide-react';
 import { api, getError, useCandidato, useCandidatos, useCandidatoMutation, type Candidato, type CandidatoInput } from './api';
 import { LandingPage } from './pages/LandingPage';
+import { FullScreenVoting } from './pages/FullScreenVoting';
 
 const schema = z.object({
   nome: z.string().trim().min(3, 'Informe o nome completo.').max(150),
@@ -98,6 +99,8 @@ function Urna(){
 function NotFound(){return <div className="empty notfound"><X size={42}/><h1>Página não encontrada</h1><Link to="/" className="btn btn-primary">Voltar ao início</Link></div>;}
 export default function App() {
   const { pathname } = useLocation();
-  return pathname === '/' ? <LandingPage /> : <Layout />;
+  if (pathname === '/' || pathname === '/urna') return <FullScreenVoting />;
+  if (pathname === '/apresentacao') return <LandingPage />;
+  return <Layout />;
 }
 

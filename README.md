@@ -60,17 +60,36 @@ O projeto é educacional e não implementa votação anônima, autenticação de
 
 `react-router-dom`, `react-hook-form`, `zod`, `@hookform/resolvers`, `axios` e `@tanstack/react-query`.
 
-## Nova interface e experiência 3D
 
-O endereço `http://localhost:5173/` abre a landing page profissional com uma urna eletrônica 3D procedural criada com Three.js e React Three Fiber. O painel administrativo está em `/painel`, e o simulador em `/urna`. As demais rotas de cadastro permanecem inalteradas.
+## Telas da aplicação
 
-A cena 3D é carregada sob demanda apenas na abertura. Não depende de modelos externos ou de chaves de API. Se o navegador não oferecer suporte a WebGL, o restante do sistema continua acessível pelo botão de entrada.
+- `/` — urna eletrônica em tela cheia, para simular votos, com marca do TSE como referência visual e aviso de projeto não oficial.
+- `/urna` — alternativa direta para a mesma urna em tela cheia.
+- `/painel` — dashboard administrativo, indicadores e acesso às funcionalidades do CRUD.
+- `/candidatos` — listagem, pesquisa e gestão de candidatos.
+- `/candidatos/novo` — formulário de cadastro.
+- `/candidatos/editar/:id` — edição.
+- `/candidatos/excluir/:id` — confirmação de exclusão.
+- `/apresentacao` — landing page anterior, com urna Three.js/React Three Fiber.
 
-Para atualizar as dependências depois desta versão:
+Na urna, BRANCO apresenta um estado de demonstração, mas não registra voto em branco. CORRIGE limpa a entrada. CONFIRMA envia um voto para `POST /api/candidatos/{id}/votar`, que executa incremento atômico no Laravel. O projeto não realiza autenticação de eleitor, anonimização ou controle de votação única.
+
+## Executar
+
+No Codespaces:
 
 ```bash
-cd frontend
+cd /workspaces/ApiRestLaravel
+bash .devcontainer/start.sh
+```
+
+Abra a porta 5173. Em caso de atualização de dependências:
+
+```bash
+cd /workspaces/ApiRestLaravel/frontend
 npm install
 npm run build
 npm run dev
 ```
+
+A imagem institucional é carregada do domínio oficial `www.tse.jus.br`. O uso é apenas para referência visual: o EleiçãoLab não possui vínculo, aprovação ou certificação do Tribunal Superior Eleitoral.
