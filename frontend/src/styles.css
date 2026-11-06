@@ -191,3 +191,34 @@
 @media(max-width:440px){.kiosk-heading .kiosk-eyebrow{font-size:8px}.kiosk-heading h1{font-size:18px}.kiosk-screen-flag{font-size:7px}.kiosk-screen-flag span:first-child{max-width:180px}.kiosk-digit-row{gap:3px}.kiosk-digit-row span{width:28px;height:36px;font-size:18px}.kiosk-person strong{font-size:13px}.kiosk-device-number{display:none}.kiosk-identity small{font-size:6.5px}.kiosk-device-footer{font-size:8px}}
 @media(max-height:780px) and (min-width:761px){.kiosk-main{padding-top:13px}.kiosk-heading{margin-bottom:12px}.kiosk-heading h1{font-size:23px}.kiosk-screen{min-height:340px}.kiosk-number-key{height:43px}.kiosk-actions button{height:43px}.kiosk-keypad-help{padding-top:12px}.kiosk-device-top{min-height:56px}.kiosk-screen-title{margin-top:12px}}
 
+
+
+.kiosk-progress{display:flex;align-items:center;justify-content:center;gap:8px;margin:13px auto 0}
+.kiosk-progress span{height:5px;width:clamp(24px,4vw,62px);border-radius:99px;background:#335b6e;transition:background .2s,box-shadow .2s}
+.kiosk-progress span.is-current{background:#6de4c1;box-shadow:0 0 11px #6de4c145}
+.kiosk-progress span.is-done{background:#269673}
+.kiosk-candidate-photo{position:relative;overflow:hidden;flex-shrink:0;border-radius:3px}
+.kiosk-candidate-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
+.kiosk-candidate-photo span{display:grid;place-items:center;width:100%;height:100%}
+.kiosk-choice-notice{display:grid;gap:6px;align-self:center;width:100%;padding:16px 18px;border-radius:8px;border:1px solid #c4d1d1;background:#f1f7f3}
+.kiosk-choice-notice strong{font-size:17px;letter-spacing:.5px;color:#123e3e}
+.kiosk-choice-notice span{font-size:12px;font-weight:700;color:#376165}
+.kiosk-choice-notice small{font-size:10px;color:#728786;line-height:1.6}
+.kiosk-choice-null{background:#fff3f0;border-color:#f4cec5}
+.kiosk-choice-null strong{color:#ac3a30}
+.kiosk-choice-null span{color:#854943}
+.candidate-photo-field{display:flex;align-items:center;gap:22px;border:1px dashed #c8d6e0;border-radius:13px;background:#f8fbfd;padding:19px;margin:24px 0 0}
+.candidate-photo-preview{width:118px;height:137px;background:#e4eaf0;color:#91a0b2;border:1px solid #d6e0e7;border-radius:10px;display:grid;place-items:center;overflow:hidden;flex:none}
+.candidate-photo-preview img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.candidate-photo-description{display:grid;gap:8px;align-content:center}
+.candidate-photo-description strong{font-size:14px;color:#293a53}
+.candidate-photo-description p{font-size:12px;line-height:1.6;margin:0;color:#7b8ea6}
+.candidate-photo-description small{font-size:10px;color:#94a5b6}
+.candidate-photo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:3px 0}
+.candidate-photo-upload,.candidate-photo-remove{display:inline-flex;align-items:center;gap:8px;background:#e5f8f1;color:#078e74;padding:10px 13px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;border:1px solid #bcece0}
+.candidate-photo-upload input{display:none}
+.candidate-photo-remove{background:#fff1f3;color:#ba4351;border-color:#fbd2d8}
+.field select{width:100%;min-height:44px;border:1px solid #dce4ec;border-radius:9px;background:white;padding:12px 14px;color:#1d304a;font-size:13px}
+.avatar{overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:center top}
+@media(max-width:650px){.candidate-photo-field{flex-direction:column;align-items:start;padding:15px}.candidate-photo-preview{width:115px;height:130px}.kiosk-progress{gap:5px}}
